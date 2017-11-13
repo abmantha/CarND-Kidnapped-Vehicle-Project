@@ -27,7 +27,22 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
     num_particles = 10; // some empirical value
 
-    
+    default_random_engine gen;
+    normal_distribution<double> dist_x(x, std[0]);
+    normal_distribution<double> dist_y(y, std[1]);
+    normal_distribution<double> dist_theta(theta, std[2]); 
+
+    particles.resize(num_particles);
+    for (auto i = 0; i < particles.size(); ++i)
+    {
+        Particle p;
+        p.id = i;
+        p.x = dist_x(gen);
+        p.y = dist_y(gen);
+        p.theta = dist_theta(gen);
+        p.weight = 1;
+        particles.push_back(p);
+    }
 
 }
 
@@ -37,6 +52,22 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
 
+    default_random_engine gen;
+
+
+    for (auto i = 0; i < particles.size(); ++i)
+    {
+        Particle p = particles[i];
+
+        normal_distribution<double> dist_x(p.x, std_pos[0]);
+        normal_distribution<double> dist_y(p.y, std_pos[1]);
+        normal_distribution<double> dist_yaw(p.theta, std_pos[2]); 
+
+        p.x = (p.x + (velocity / yaw_rate) * (std::sin(p.theta + yaw_rate*delta_t) - std::sin(p.theta))) + dist_x(gen);
+        p.y = (p.y + (velocity / yaw_rate) * (std::cos(p.theta) - std::cos(p.theta + yaw_rate*delta_t))) + dist_y(gen);
+        p.theta = (p.theta + yaw_rate*delta_t) + dist_yaw(gen);
+    }
+
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
@@ -44,6 +75,8 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
+
+        
 
 }
 
