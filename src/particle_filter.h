@@ -9,6 +9,10 @@
 #ifndef PARTICLE_FILTER_H_
 #define PARTICLE_FILTER_H_
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #include "helper_functions.h"
 
 struct Particle {
@@ -17,7 +21,7 @@ struct Particle {
 	double y;
 	double theta;
 	double weight;
-	std::vector<int> associations;
+	std::vector<int> associations; 
 	std::vector<double> sense_x;
 	std::vector<double> sense_y;
 };
@@ -34,7 +38,10 @@ class ParticleFilter {
 	
 	// Vector of weights of all particles
 	std::vector<double> weights;
-	
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
 public:
 	
 	// Set of current particles

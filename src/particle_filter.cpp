@@ -6,6 +6,7 @@
  */
 
 #include <random>
+#include <cstdlib>
 #include <algorithm>
 #include <iostream>
 #include <numeric>
@@ -76,7 +77,33 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 
-        
+    // predicted -- prediction measurements between one particular particle and all landmarks within range
+    // observations -- actual landmark measurements gathered from lidar
+
+    // assign each sensor observation the map landmark id associated with it
+
+    // for each predicted value
+    //      store the min value to be the current value
+    //      for each observation value
+    //          calculate the distance between the prediction and observation
+    //          if the difference is greater than the min
+    //              set the min to be the difference
+
+    for (auto p = predicted.begin(); p != predicted.end(); ++p)
+    {
+        double min_distance = std::sqrt(std::pow(p->x_f, 2) + std::pow(p->y_f, 2));
+        int map_landmark_id;
+        for (auto o = observations.begin(); o != observations.end(); ++o)
+        {
+            double curr_distance = std::sqrt(std::pow(o->x_f - p->x_f, 2) + std::pow(o->y_f - p->y_f, 2));
+            if (curr_distance < min_distance)
+            {
+                min_distance = curr_distance;
+                map_landmark_id = o.id;
+            }
+        }
+        p.id = map_landmark_id;
+    }
 
 }
 
@@ -92,12 +119,71 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+    double std_x = std_landmark[0];
+    double std_y = std_landmark[1];
+    double gaussian_norm = 1 / (2 * M_PI * std_x * std_y);
+
+    for (auto p = particles.begin(); p != particles.end(); ++p) 
+    {
+        double weight_product = 1.0;
+        for (auto o = observations.begin(); o != observations.end(); ++o)
+        {
+            double transform_x = p.x + (std::cos(p.theta) * o.x_f) - (std::sin(p.theta) * o.y_f);
+            double transform_y = p.y + (std::sin(p.theta) * o.x_f) + (std::cos(p.theta) * o.y_f);
+
+            double min_distance = 1000000;
+            int min_landmark_index;
+
+            for (auto l = map_landmarks.landmark_list.begin(); l != map_landmarks.landmark_list.end(); ++l)
+            {
+                double diff = std::sqrt(std::pow(transform_x - l.x_f, 2) + std::pow(transform_y - l.y_f, 2));
+                if (diff < min_distance)
+                {
+                    min_distance = diff;
+                    min_landmark_index = l.id_i;
+                    p.sense_x.push_back(transform_x);
+                    p.sense_y.push_back(transform_y);
+                }
+            }
+
+            p.associations.push_back(min_landmark_index);
+
+            // calculate weight for particle
+            double mu_x = map_landmarks.landmark_list[min_landmark_index].x_f;
+            double mu_y = map_landmarks.landmark_list[min_landmark_index].y_f;
+            double exponent = (std::pow(transform_x - mu_x, 2) / (2 * std::pow(std_x, 2)) + std::pow(transform_y - mu_y, 2) / (2 * std::pow(std_y, 2));
+            weight_product *= gaussian_norm * std::exp(-exponent);
+        }
+        p.weight = weight_product;
+        weights.at(p.id) = weight_product;
+    }
 }
 
 void ParticleFilter::resample() {
 	// TODO: Resample particles with replacement with probability proportional to their weight. 
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+
+    int index = int(std::rand() % particles.size());
+    double beta = 0.0;
+    double max_weight = *std::max_element(weights.begin(), weights.end());
+
+    std::uniform_real_distribution<> dist(0.0, 1.0);
+
+    std::vector<Particle> resampled_particles;
+    for (auto i = 0; i < particles.size(); ++i)
+    {
+        double r = ;
+        beta += dist(gen) * 2.0 * max_weight;
+        while (beta > weights[index])
+        {
+            beta -= weights[index];
+            index = (index + 1) % particles.size();
+        }
+        resampled_particles.push_back(particles[index]);
+    }
+    particles = resampled_particles;
 
 }
 
@@ -129,6 +215,7 @@ string ParticleFilter::getAssociations(Particle best)
     s = s.substr(0, s.length()-1);  // get rid of the trailing space
     return s;
 }
+
 string ParticleFilter::getSenseX(Particle best)
 {
 	vector<double> v = best.sense_x;
@@ -138,6 +225,7 @@ string ParticleFilter::getSenseX(Particle best)
     s = s.substr(0, s.length()-1);  // get rid of the trailing space
     return s;
 }
+
 string ParticleFilter::getSenseY(Particle best)
 {
 	vector<double> v = best.sense_y;
