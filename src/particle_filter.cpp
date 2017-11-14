@@ -26,8 +26,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 
-    std::cout << "INIT" << std::endl;
-
     num_particles = 5; // some empirical value
 
     normal_distribution<double> dist_x(x, std[0]);
@@ -48,8 +46,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
     is_initialized = true;
 
-    std::cout << "END INIT" << std::endl;
-
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
@@ -57,10 +53,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
-
-    // default_random_engine gen;
-
-    std::cout << "PREDICTION" << std::endl;
 
     for (auto i = 0; i < particles.size(); ++i)
     {
@@ -87,9 +79,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
         p.theta = dist_yaw(gen);
 
     }
-
-    std::cout << "END PREDICTION" << std::endl;
-
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
@@ -117,69 +106,36 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
 
-    std::cout << "UPDATE WEIGHTS" << std::endl;
-
     double std_x = std_landmark[0];
     double std_y = std_landmark[1];
     double gaussian_norm = 1 / (2 * M_PI * std_x * std_y);
-    std::cout << "Gaussian Norm: " << gaussian_norm << std::endl;
 
     for (auto p = particles.begin(); p != particles.end(); ++p) 
     {
         p->weight = 1.0;
         for (auto o = observations.begin(); o != observations.end(); ++o)
         {
-            // double transform_x = p->x + (std::cos(p->theta) * o->x) - (std::sin(p->theta) * o->y);
-            // double transform_y = p->y + (std::sin(p->theta) * o->x) + (std::cos(p->theta) * o->y);
-
-            // double min_distance = 1000000;
-            // int min_landmark_index;
-
-            // for (auto l = map_landmarks.landmark_list.begin(); l != map_landmarks.landmark_list.end(); ++l)
-            // {
-            //     double distance = dist(transform_x, transform_y, l->x_f, l->y_f);
-            //     if (distance < min_distance)
-            //     {
-            //         min_distance = distance;
-            //         min_landmark_index = l->id_i;
-            //         // p->sense_x.push_back(transform_x);
-            //         // p->sense_y.push_back(transform_y);
-            //     }
-            // }
-
-            // p->associations.push_back(min_landmark_index);
-
-            // // calculate weight for particle
-            // double mu_x = map_landmarks.landmark_list[min_landmark_index].x_f;
-            // double mu_y = map_landmarks.landmark_list[min_landmark_index].y_f;
-
-            LandmarkObs obs;
-            obs.x = p->x + (std::cos(p->theta) * o->x) - (std::sin(p->theta) * o->y);
-            obs.y = p->y + (std::sin(p->theta) * o->x) + (std::cos(p->theta) * o->y);
+            double transform_x = p->x + (std::cos(p->theta) * o->x) - (std::sin(p->theta) * o->y);
+            double transform_y = p->y + (std::sin(p->theta) * o->x) + (std::cos(p->theta) * o->y);
 
             std::vector<double> distances;
             for (auto l = map_landmarks.landmark_list.begin(); l != map_landmarks.landmark_list.end(); ++l)
             {
-                double distance = dist(obs.x, obs.y, l->x_f, l->y_f);
+                double distance = dist(transform_x, transform_y, l->x_f, l->y_f);
                 distances.push_back(distance);
             }
 
             auto min_distance_elem = std::min_element(distances.begin(), distances.end());
             auto map_landmark = map_landmarks.landmark_list[distance(distances.begin(), min_distance_elem)];
-            obs.id = map_landmark.id_i;
-            
+
             double mu_x = map_landmark.x_f;
             double mu_y = map_landmark.y_f;
 
-            double exponent = (std::pow(obs.x - mu_x, 2) / (2 * std::pow(std_x, 2))) + (std::pow(obs.y - mu_y, 2) / (2 * std::pow(std_y, 2)));
+            double exponent = (std::pow(transform_x - mu_x, 2) / (2 * std::pow(std_x, 2))) + (std::pow(transform_y - mu_y, 2) / (2 * std::pow(std_y, 2)));
             p->weight *= (gaussian_norm * std::exp(-1.0 * exponent));
-            std::cout << "Weight product inner: " << p->weight << std::endl;
         }
-        // p->weight = weight_product;
         weights.at(p->id) = p->weight;
     }
-
-    std::cout << "END UPDATE WEIGHTS" << std::endl;
 }
 
 void ParticleFilter::resample() {
@@ -227,9 +183,6 @@ void ParticleFilter::resample() {
     }
 
     particles = resampled_particles;
-
-    std::cout << "END RESAMPLE" << std::endl;
-
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
