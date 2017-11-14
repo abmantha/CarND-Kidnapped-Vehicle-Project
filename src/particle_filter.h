@@ -26,8 +26,6 @@ struct Particle {
 	std::vector<double> sense_y;
 };
 
-
-
 class ParticleFilter {
 	
 	// Number of particles to draw
@@ -39,8 +37,7 @@ class ParticleFilter {
 	// Vector of weights of all particles
 	std::vector<double> weights;
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
+    std::default_random_engine gen;
 
 public:
 	
