@@ -26,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 
-    num_particles = 5; // some empirical value
+    num_particles = 10; // some empirical value
 
     normal_distribution<double> dist_x(x, std[0]);
     normal_distribution<double> dist_y(y, std[1]);
@@ -122,7 +122,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             for (auto l = map_landmarks.landmark_list.begin(); l != map_landmarks.landmark_list.end(); ++l)
             {
                 double distance = dist(transform_x, transform_y, l->x_f, l->y_f);
-                distances.push_back(distance);
+                distances.push_back(distance);                    
             }
 
             auto min_distance_elem = std::min_element(distances.begin(), distances.end());
@@ -143,45 +143,28 @@ void ParticleFilter::resample() {
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
-    // std::cout << "RESAMPLE" << std::endl;
-
-    // int index = int(std::rand() % particles.size());
-    // double beta = 0.0;
-    // double max_weight = *std::max_element(weights.begin(), weights.end());
-    // std::cout << "Max weight: " << max_weight << std::endl;
-
-    // std::uniform_real_distribution<> dist(0.0, 1.0);
-
-    // std::vector<Particle> resampled_particles;
-    // for (auto i = 0; i < particles.size(); ++i)
-    // {
-    //     beta += dist(gen) * 2.0 * max_weight;
-    //     while (beta > weights[index])
-    //     {
-    //         beta -= weights[index];
-    //         index = (index + 1) % particles.size();
-    //     }
-    //     resampled_particles.push_back(particles[index]);
-    // }
-    // particles = resampled_particles;
-    // std::cout << "END RESAMPLE" << std::endl;
-
-    std::vector<Particle> resampled_particles;
-
     for (int i = 0; i < particles.size(); ++i)
     {
         weights[i] = particles[i].weight;
     }
+    std::vector<Particle> resampled_particles;
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::discrete_distribution<> d(weights.begin(), weights.end());
-    for (int i = 0; i < num_particles; ++i)
+    int index = int(std::rand() % particles.size());
+    double beta = 0.0;
+    double max_weight = *std::max_element(weights.begin(), weights.end());
+
+    std::uniform_real_distribution<> dist(0.0, 1.0);
+
+    for (auto i = 0; i < particles.size(); ++i)
     {
-        Particle particle_res = particles[d(gen)];
-        resampled_particles.push_back(particle_res);
+        beta += dist(gen) * 2.0 * max_weight;
+        while (beta > weights[index])
+        {
+            beta -= weights[index];
+            index = (index + 1) % particles.size();
+        }
+        resampled_particles.push_back(particles[index]);
     }
-
     particles = resampled_particles;
 }
 
