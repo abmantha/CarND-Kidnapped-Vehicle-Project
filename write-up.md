@@ -1,4 +1,4 @@
-# Official Write-up
+# Write-up
 --------------------------
 * Author: Abhishek Mantha
 * Date: 11/13
